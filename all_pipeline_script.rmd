@@ -1,22 +1,29 @@
 ---
 title: "new_script"
-author: "Rahma"
+author: "Rahma AIT MAHFOUD"
 date: "2023-05-03"
 output: html_document
+  html_document:
+    theme: yeti
+    toc: true
+    toc_float: true
+    collapsed: true
+    number_sections: true
 ---
-# Loading the dataset 
+# 1) Loading the dataset 
 ```{r}
 reads <- read.csv("C:/Users/atmra/Downloads/reads_filtres.csv", header = TRUE)
 ```
 
-## Some genes were not detected at all in these samples. We will discard them.
-# get colnames as vector
+Some genes were not detected at all in these samples. We will discard them.
+
 ```{r}
+# get colnames as vector
 samples <- as.vector(colnames(reads))
 ```
 
-# associate a phenotype to the samples
 ```{r}
+# associate a phenotype to the samples
 associer_phenotype <- function(samples) {
   phenotypes <- ifelse(grepl("A", samples), "Act", 
                        ifelse(grepl("C", samples), "Ctrl", NA))
@@ -24,16 +31,16 @@ associer_phenotype <- function(samples) {
 }
 ```
 
-# apply associer_phenotype to our vector to associate a phenotype for each sample
 ```{r}
+# apply associer_phenotype to our vector to associate a phenotype for each sample
 phenotypes <- sapply(samples, associer_phenotype)
 ```
 # phenotypic dataframe
 ```{r}
 dataframe <- data.frame(Samples = samples, Phenotypes = phenotypes, stringsAsFactors = FALSE)
 ```
-# associate a gender to the samples
 ```{r}
+# associate a gender to the samples
 gender_ <- function(samples) {
   gender <- ifelse(grepl("F", samples), "Female", 
                        ifelse(grepl("M", samples), "Male", NA))
@@ -41,19 +48,20 @@ gender_ <- function(samples) {
 }
 ```
 
-# apply gender_ to our vector to associate a gender for each sample
 ```{r}
+# apply gender_ to our vector to associate a gender for each sample
 gender <- sapply(samples, gender_)
 ```
-# update dataframe
+
 ```{r}
+# update dataframe
 dataframe$Gender <- gender 
 ```
-# remove the first line unwanted
+
 ```{r}
+# remove the first line unwanted
 dataframe <- dataframe[-1,]
 ```
-# Count the number of samples for each class
 ```{r}
 ## Count the number of samples in each class
 table(dataframe$Phenotypes)
@@ -75,7 +83,6 @@ add_groups <- function(dataframe) {
 dataframe <- add_groups(dataframe)
 ```
 
-# 1) Reads filter
 # Order the columns by increasing numbers 
 ```{r}
 library('gtools')
@@ -100,18 +107,20 @@ MC <-nrow(subset(dataframe, Gender == "Male" & Phenotypes == "Ctrl"))
 *1) Active females FA*
 ```{r}
 # Create a vector with the desired column names for the active females cluster
-colnames_act_females <- colnames(reads)[substr(colnames(reads), 4, 4) == "F" & substr(colnames(reads), 5, 5) == "A"]
+colnames_act_females <- colnames(reads)[substr(colnames(reads), 4, 4)
+                       == "F" & substr(colnames(reads), 5, 5) == "A"]
 # Extract the columns corresponding to the column names in the vector colnames_females_active
 active_females <- reads[, colnames_act_females]
 row.names(active_females) <- reads$Gene_id
 #dim(active_females)
 ```
-# First normalization
+# 2) TMM normalization
+*First normalization for active_females*
 ```{r}
 library(edgeR)
 matrix_norm <- as.matrix(active_females)
-tmm_factor <- calcNormFactors(matrix_norm)
-nor_TMM <- cpm(matrix_norm, normalized.lib.size=tmm_factor)
+tmm_factor <- calcNormFactors(matrix_norm) #calculate TMM factor
+nor_TMM <- cpm(matrix_norm, normalized.lib.size=tmm_factor) #normalize
 
 #total_reads <- colSums(active_females)
 
@@ -122,31 +131,26 @@ nor_TMM <- cpm(matrix_norm, normalized.lib.size=tmm_factor)
 # Normalisation by mean
 #nor_TMM <- scale(active_females, center = TRUE, scale = FALSE)
 ```
+# 3) Filtering 
 # filtering for active_females:
 # Calculate the sum of the reads for each line
 ```{r}
 sum_reads_FA <- rowSums(nor_TMM)
-```
-
-
 # Identify the lines where the sum of the reads is equal to 1000.
-```{r}
 lines_to_remove1000_FA <- sum_reads_FA < 1000
-
-```
 # Delete the rows where the sum of the reads is equal to 1000
-```{r}
 reads_filter1000_FA <- subset(nor_TMM, !lines_to_remove1000_FA)
 ```
 *2) Inactive femalesn FC*
 ```{r}
-colnames_inact_females <- colnames(reads)[substr(colnames(reads), 4, 4) == "F" & substr(colnames(reads), 5, 5) == "C"]
+colnames_inact_females <- colnames(reads)[substr(colnames(reads), 4, 4)
+                         == "F" & substr(colnames(reads), 5, 5) == "C"]
 inactive_females <- reads[, colnames_inact_females]
 row.names(inactive_females) <- reads$Gene_id
 #dim(inactive_females)
 ```
 
-#First normalization
+#TMM normalization for inactive_females
 ```{r}
 matrix_norm2 <- as.matrix(inactive_females)
 tmm_factor2 <- calcNormFactors(matrix_norm2)
@@ -160,12 +164,13 @@ reads_filter1000_FC <- subset(nor_TMM2, !lines_to_remove1000_FC)
 ```
 *3) active males MA*
 ```{r}
-colnames_act_males <- colnames(reads)[substr(colnames(reads), 4, 4) == "M" & substr(colnames(reads), 5, 5) == "A"]
+colnames_act_males <- colnames(reads)[substr(colnames(reads), 4, 4)
+                     == "M" & substr(colnames(reads), 5, 5) == "A"]
 active_males <- reads[, colnames_act_males]
 row.names(active_males) <- reads$Gene_id
 #dim(active_males)
 ```
-#First normalization
+#TMM normalization for active_males
 ```{r}
 matrix_norm3 <- as.matrix(active_males)
 tmm_factor3 <- calcNormFactors(matrix_norm3)
@@ -180,11 +185,12 @@ reads_filter1000_MA <- subset(nor_TMM3, !lines_to_remove1000_MA)
 ```
 *4) Inactive males MC*
 ```{r}
-colnames_inact_males <- colnames(reads)[substr(colnames(reads), 4, 4) == "M" & substr(colnames(reads), 5, 5) == "C"]
+colnames_inact_males <- colnames(reads)[substr(colnames(reads), 4, 4)
+                       == "M" & substr(colnames(reads), 5, 5) == "C"]
 inactive_males <- reads[, colnames_inact_males]
 row.names(inactive_males) <- reads$Gene_id
 ```
-#First normalization
+#TMM normalization for the fourth condition inactive_males
 ```{r}
 matrix_norm4 <- as.matrix(inactive_males)
 tmm_factor4 <- calcNormFactors(matrix_norm4)
@@ -199,10 +205,10 @@ reads_filter1000_MC <- subset(nor_TMM4, !lines_to_remove1000_MC)
 
 
 *interpretation*
-by increasing the filtering parameter from 10 to 1000, we notice that the number of reads decreases, reaches from 14434 to 4000 for the genes which have reads of more than 1000 reads
-#____________________________________________________________________________________________________________
-## Data visualization:
+by increasing the filtering parameter from 10 to 1000, we notice that the number of reads decreases,
+ reaches from 14434 to 4000 for the genes which have reads of more than 1000 reads
 
+## Data visualization:
 
 ```{r}
 ## Define a specific color for each phenotype
@@ -261,20 +267,9 @@ boxplot(log2(nor_TMM_1000_FA+epsilon),  col=dataframe$color, cex.axis=0.7,
         las=1, xlab="log2(normalized counts)", horizontal=TRUE, main="Normalized counts") 
 ```
 
-```{r}
-library(edgeR)
-y <- DGEList(counts = nor_TMM)
-# Estimate the dispersion level
-y <- estimateDisp(y)
-plotBCV(y, xlab= "TMM coefficient")
-```
-
-#=============================================================================================================
-#Data normalization: 
-#Mean subsets:
+# Mean subsets:
 *1-1)normalized_mean_filter1000_FA*
 ```{r}
-# After normalization:
 nb_col <- ncol(reads_filter1000_FA)+1
 # Create a new table to store the results
 FA_nor_mean_1000 <- data.frame(matrix(0, nrow = nrow(reads_filter1000_FA), 
@@ -286,13 +281,14 @@ row.names(FA_nor_mean_1000) <- row.names(reads_filter1000_FA)
 ```
 
 ```{r}
-# After normalization:
 # Iterating on samples
 for (sample_FA in sample_names_FA) {
   # Select replicate columns for the current sample
-  sample_cols_FA <- grep(sample_FA, colnames(reads_filter1000_FA)) # "grep" finds occurrences of a given pattern in a string vector, and returns the corresponding indices or values.
+  sample_cols_FA <- grep(sample_FA, colnames(reads_filter1000_FA))
+   # "grep" finds occurrences of a given pattern in a string vector,
+   # and returns the corresponding indices or values.
   
-# Calculate the average replicates for each line (gene) for the current sample
+# Calculate the average or the sum or the median replicates for each line (gene) for the current sample
   #FA_nor_mean_1000[sample_FA] <- apply(nor_TMM_1000_FA[, sample_cols_FA],1,median)
   #FA_nor_mean_1000[sample_FA] <- apply(nor_TMM_1000_FA[, sample_cols_FA], 1, sum)
   FA_nor_mean_1000[sample_FA] <- apply(reads_filter1000_FA[, sample_cols_FA], 1, mean)
@@ -300,17 +296,18 @@ for (sample_FA in sample_names_FA) {
 # Show result
 print(FA_nor_mean_1000)
 ```
+# 4) Profiling
 # choose the optimal number of clusters
-#Elbow
+
 
 ```{r}
 library(Mfuzz)
     mfmat <- as.matrix((FA_nor_mean_1000))
     mfmat <- DGEList(counts = mfmat, group=colnames(FA_nor_mean_1000))
-    mfmat <- calcNormFactors(mfmat)
-    mfcpm <- cpm(mfmat, normalized.lib.size=TRUE)
+    mfmat <- calcNormFactors(mfmat) #calculate a normalization factor
+    mfcpm <- cpm(mfmat, normalized.lib.size=TRUE) #using cpm normalization with Mfuzz
   
-    timepoint <- colnames(FA_nor_mean_1000)
+    timepoint <- colnames(FA_nor_mean_1000) #extract the timepoints
     test_data <- rbind(timepoint, mfcpm)
     row.names(test_data)[1]<-"time"
     #save it to a temp file so ti doesn't clutter up the blog directory
@@ -318,11 +315,11 @@ library(Mfuzz)
     write.table(test_data,file="C:/Users/atmra/Downloads/test_data.csv", sep='\t', col.names=NA)
     #read it back in as an expression set
     mfdata <- table2eset(file=tmp)
-    mfdata.s <- standardise(mfdata)
+    mfdata.s <- standardise(mfdata) #standarisation
     m1 <- mestimate(mfdata.s)
     
 ```
-
+**Elbow "silhouette"**
 ```{r}
 library(cluster)
 library(factoextra)
@@ -351,7 +348,7 @@ library(factoextra)
     elb <- plot(1:max, wss_2to20[1:max], type="b", xlab="Number of Clusters", ylab="WSS", col="red")
     elb
 ```
-# Inertia: 
+** Inertia ** 
 ```{r}
     hierdata <- as.matrix(FA_nor_mean_1000)
     # Euclidean distance
@@ -379,12 +376,11 @@ library(factoextra)
       showlegend = F
     )
 ```
-
 ```{r}
 plot(inertia, type="s", col= "blue")
 ```
 
-
+# choose the cluster number
 ```{r}
 #mfdata.s <- ExpressionSet(assayData=as.matrix(FA_nor_mean_1000))
     m1 <- mestimate(mfdata.s)
@@ -396,19 +392,16 @@ plot(inertia, type="s", col= "blue")
     }
     ov <- overlap(N_cl)
 ```
-#Overlap_plot:
+# Overlap_plot:
 ```{r}
 Ptmp<- overlap.plot(N_cl,over=ov, thres=as.numeric(0.3))
     Ptmp
 ```
 ```{r}
 fuzz <- mfuzz.plot(mfdata.s,cl=N_cl,mfrow = c(3,4), time.labels = colnames(FA_nor_mean_1000),new.window = F)
-
 fuzz
-
-
 ```
-
+# Median FA
 *1-2)normalized_median_filter1000_FA*
 ```{r}
 nb_col <- ncol(active_females)+1
@@ -441,13 +434,12 @@ print(FA_nor_median_1000)
     mfdata.s <- standardise(mfdata)
     m1 <- mestimate(mfdata.s)
 ```
-
 ```{r}
 fuzz <- mfuzz.plot(mfdata.s,cl=N_cl,mfrow = c(3,4), time.labels = colnames(FA_nor_median_1000),new.window = F)
 
 fuzz
 ```
-
+# Sum FA
 *1-2)normalized_Sum_filter1000_FA*
 ```{r}
 nb_col <- ncol(active_females)+1
@@ -483,15 +475,15 @@ print(FA_nor_sum_1000)
 ```
 
 ```{r}
-fuzz <- mfuzz.plot(mfdata.s,cl=N_cl,mfrow = c(3,4), time.labels = colnames(FA_nor_sum_1000),new.window = F)
+fuzz <- mfuzz.plot(mfdata.s,cl=N_cl,mfrow = c(3,4),
+             time.labels = colnames(FA_nor_sum_1000),new.window = F)
 
 fuzz
 ```
+*inactive_females*
 
 *1-2)normalized_mean_filter1000_FC*
 ```{r}
-# After normalization:
-# TMM:
 nb_col <- ncol(reads_filter1000_FC)+1
 # Create a new table to store the results
 FC_nor_mean_1000 <- data.frame(matrix(0, nrow = nrow(reads_filter1000_FC), 
@@ -525,7 +517,8 @@ for (sample_FC in sample_names_FC) {
     #mfdata.s <- standardise(mfdata)
     #m1 <- mestimate(mfdata.s)
 
-fuzz <- mfuzz.plot(mfdata.s,cl=N_cl,mfrow = c(3,4), time.labels = colnames(FC_nor_mean_1000),new.window = F)
+fuzz <- mfuzz.plot(mfdata.s,cl=N_cl,mfrow = c(3,4), 
+      time.labels = colnames(FC_nor_mean_1000),new.window = F)
 
 fuzz
 ```
@@ -537,7 +530,8 @@ nb_col <- ncol(reads_filter1000_FC)+1
 FC_nor_sum_1000 <- data.frame(matrix(0, nrow = nrow(reads_filter1000_FC), 
                                     ncol = nb_col / 5)) 
 # Rename the columns of the new table with the common names of the samples
-sample_names_FC <- unique(substr(colnames(reads_filter1000_FC), 1, 5)) #1 to 5 are the indexes for the common colnames
+sample_names_FC <- unique(substr(colnames(reads_filter1000_FC), 1, 5))
+ #1 to 5 are the indexes for the common colnames
 colnames(FC_nor_sum_1000) <- sample_names_FC
 row.names(FC_nor_sum_1000) <- row.names(reads_filter1000_FC)
 
@@ -562,7 +556,7 @@ for (sample_FC in sample_names_FC) {
     mfdata.s <- standardise(mfdata)
     m1 <- mestimate(mfdata.s)
     
-    cent <- 40
+    cent <- 40 # number of clusters
     i=0
     for (i in 0:9){
       N_cl<- mfuzz(mfdata.s, centers=cent, m = m1)
@@ -570,26 +564,24 @@ for (sample_FC in sample_names_FC) {
     }
     ov <- overlap(N_cl)
 
-fuzz <- mfuzz.plot(mfdata.s,cl=N_cl,mfrow = c(3,4), time.labels = colnames(FC_nor_sum_1000),new.window = F)
+fuzz <- mfuzz.plot(mfdata.s,cl=N_cl,mfrow = c(3,4), 
+        time.labels = colnames(FC_nor_sum_1000),new.window = F)
 
 fuzz
 ```
 
 *1-2)normalized_mean_filter1000_FC*
 ```{r}
-# After normalization:
-# TMM:
 nb_col <- ncol(reads_filter1000_FC)+1
 # Create a new table to store the results
 FC_nor_mean_1000 <- data.frame(matrix(0, nrow = nrow(reads_filter1000_FC), 
                                     ncol = nb_col / 5)) 
 # Rename the columns of the new table with the common names of the samples
-sample_names_FC <- unique(substr(colnames(reads_filter1000_FC), 1, 5)) #1 to 5 are the indexes for the common colnames
+sample_names_FC <- unique(substr(colnames(reads_filter1000_FC), 1, 5))
 colnames(FC_nor_mean_1000) <- sample_names_FC
 row.names(FC_nor_mean_1000) <- row.names(reads_filter1000_FC)
 ```
 ```{r}
-# After normalization:
 # Iterating on samples
 for (sample_FC in sample_names_FC) {
   # Select replicate columns for the current sample
@@ -624,11 +616,10 @@ fuzz <- mfuzz.plot(mfdata.s,cl=N_cl,mfrow = c(3,4), time.labels = colnames(FC_no
 
 fuzz
 ```
-
+# Active_males
 *2-2)normalized_sum_filter1000_MA*
 ```{r}
-# After normalization:
-# TMM:
+
 nb_col <- ncol(reads_filter1000_MA)
 # Create a new table to store the results
 MA_nor_sum_1000 <- data.frame(matrix(0, nrow = nrow(reads_filter1000_MA), 
@@ -671,7 +662,7 @@ fuzz
 ```
 
 
-#MA_mean
+# MA_mean
 ```{r}
 nb_col <- ncol(reads_filter1000_MA)
 # Create a new table to store the results
@@ -713,7 +704,7 @@ fuzz <- mfuzz.plot(mfdata.s,cl=N_cl,mfrow = c(3,4), time.labels = colnames(MA_no
 fuzz
     
 ```
-#MC_mean
+# MC_mean
 ```{r}
 nb_col <- ncol(reads_filter1000_MC)
 # Create a new table to store the results
@@ -753,7 +744,7 @@ fuzz
     
 ```
 
-#MC_sum
+# MC_sum
 ```{r}
 # After normalization:
 nb_col <- ncol(reads_filter1000_MC)
@@ -784,142 +775,46 @@ for (sample_MC in sample_names_MC) {
 fuzz <- mfuzz.plot(mfdata.s,cl=N_cl,mfrow = c(3,4), time.labels = colnames(MC_nor_sum_1000),new.window = F)
 fuzz
 ```
-
-```{r}
-library("enrichR")
-expr_data <- gene_annotations
-cluster_data <- N_cl
-
-#gene_lists <- lapply(unique(cluster_data$membership), function(x) rownames(cluster_data$membership[cluster_data$cluster == 29,]))
-
-gene_list <- rownames(cluster_data$membership[cluster_data$cluster == 40,])
-
-
-enrichment_results <- lapply(gene_list, function(x) enrichr(x, "GO_Biological_Process_2018"))
-#print(enrichment_results)
-
-write.table(enrichment_results, file="enrichR_results.txt", sep="\t", row.names=FALSE)
-
-```
-
-```{r}
-library(org.Dm.eg.db)
-# Convert Gene/FBgn IDs to symboles
-gene_symbols <- mapIds(org.Dm.eg.db, keys = gene_list, column = "SYMBOL", keytype = "FLYBASE")
-
-# show symbols
-#print(gene_symbols)
-```
-
-
-```{r}
-listEnrichrSites()
-
-setEnrichrSite("FlyEnrichR")
-websiteLive <- TRUE
-
-dbs <- listEnrichrDbs()
-
-if (is.null(dbs)) websiteLive <- FALSE
-if (websiteLive) head(dbs)
-
-dbs <- c("Coexpression_Predicted_GO_Cellular_Component_2018", "Coexpression_Predicted_GO_Molecular_Function_2018",
-         "Coexpression_Predicted_GO_Biological_Process_2018")
-
-#as an example, getting data for Cluster 16 using only the core elements
-
-if (websiteLive) {
-  enriched <- enrichr(gene_symbols, dbs)
-}
-
-if (websiteLive) enriched[["Coexpression_Predicted_GO_Cellular_Component_2018"]]
-
-if (websiteLive) plotEnrich(enriched[[3]], showTerms = 20, numChar = 40, y = "Count", orderBy = "P.value")
-
-#write.table(enriched[[3]], file="enrichR_results.txt", row.names=FALSE)
-```
-
-
-
-
-
-
-
-
-
-```{r}
-
-library("enrichR")
-library(org.Dm.eg.db)
-listEnrichrSites()
-
-setEnrichrSite("FlyEnrichR")
-websiteLive <- TRUE
-
-dbs <- listEnrichrDbs()
-
-if (is.null(dbs)) websiteLive <- FALSE
-if (websiteLive) head(dbs)
-
-# Créer un dossier pour enregistrer les fichiers PNG
-dir.create("plots", showWarnings = FALSE)
-
-for (i in 1:num_clusters) {
-  gene_list <- as.data.frame(acore(mfdata.s, N_cl, min.acore = 0)[i])$NAME
-  gene_symbols <- mapIds(org.Dm.eg.db, keys = gene_list, column = "SYMBOL", keytype = "FLYBASE")
-  dbs <- "Coexpression_Predicted_GO_Biological_Process_2018"
-  result <- enrichr(gene_symbols, dbs)
-  
-  # Nom du fichier PNG basé sur le numéro de cluster
-  filename <- paste0("plots/plot_cluster_", i, ".png")
-  
-  # Enregistrer le plot en tant que fichier PNG
-  png(filename)
-  plotEnrich(result$Coexpression_Predicted_GO_Biological_Process_2018, showTerms = 20, numChar = 70, y = "Count", orderBy = "P.value")
-  dev.off()
-}
-
-```
-
-
-
+# 5) Enrichment/Id conversion
 ```{r}
 library("enrichR")
 library(org.Dm.eg.db)
 library(ggplot2)
 
-# Créer un dossier pour enregistrer les fichiers PNG
+# Create a folder to save PNG files
 dir.create("plots25", showWarnings = FALSE)
 
-results <- list()  # Liste pour stocker les résultats par cluster
+results <- list()  # List to store results by cluster
 
 for (i in 1:length(acore(mfdata.s, N_cl, min.acore = 0))) {
   gene_list <- as.data.frame(acore(mfdata.s, N_cl, min.acore = 0)[i])$NAME
+  #ID conversion
   gene_symbols <- mapIds(org.Dm.eg.db, keys = gene_list, column = "SYMBOL", keytype = "FLYBASE")
+  #choosing different databases
   dbs <- c("Coexpression_Predicted_GO_Biological_Process_2018","GO Cellular Component 2018","GO Molecular Function 2018","GO Biological Process 2018","GO Biological Process GeneRIF","KEGG 2019", "PPI Network Hubs from DroID 2017","WikiPathways 2018")
   result <- enrichr(gene_symbols, dbs)
   
-  # Stocker le résultat dans la liste
+  # List to store results 
   results[[i]] <- result
   
-  # Nom du fichier PNG basé sur le numéro de cluster
+  # PNG file name based on cluster number
   filename <- paste0("plots25/FA", i, ".png")
   
-  # Générer le plot avec ggplot2
+  # Generate plot with ggplot2
   plot <- plotEnrich(result$Coexpression_Predicted_GO_Biological_Process_2018, showTerms = 20, numChar = 70, y = "Count", orderBy = "P.value")
   
-  # Enregistrer le plot en tant que fichier PNG
+  # Save plot as PNG file
   ggsave(filename, plot, width = 10, height = 6, dpi = 300)
 }
 
-# Exporter les résultats dans des fichiers CSV ou TXT par cluster
+# Export results to CSV or TXT files per cluster
 for (i in 1:length(results)) {
   result <- results[[i]]
   
-  # Créer un nom de fichier unique pour chaque cluster
+  # Create a unique file name for each cluster
   output_file <- paste0("cluster_", i, "_results.txt")
   
-  # Extraire les informations requises des résultats et les stocker dans un data frame
+  # Extract the required information from the results and store it in a data frame
   output_data <- data.frame(
     Term = character(),
     P.value = numeric(),
@@ -927,17 +822,17 @@ for (i in 1:length(results)) {
     stringsAsFactors = FALSE
   )
   
-  # Extraire les informations de chaque base de données et les ajouter au data frame
+  # Extract information from each database and add it to the data frame
   for (db in dbs) {
     terms <- result[[db]]$Term
     pvalues <- result[[db]]$P.value
     genes <- result[[db]]$Genes
     
-    # Fusionner les informations de chaque base de données dans le data frame
+    # Merge information from each database into the data frame
     output_data <- rbind(output_data, data.frame(Term = terms, P.value = pvalues, Genes = genes, stringsAsFactors = FALSE))
   }
   
-  # Enregistrer le data frame dans un fichier CSV ou TXT
+  # Save the data frame as a CSV or TXT file
   write.table(output_data, file = output_file, sep = "\t", row.names = FALSE, quote = TRUE)
 }
 
